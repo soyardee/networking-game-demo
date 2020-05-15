@@ -1,52 +1,85 @@
 import socket
-from _thread import *
 import pickle
+from Player import Player
+
+MAX_CLIENTS = 4
+GAME_SIZE = (1000, 1000)
 
 server = "127.0.0.1"    # localhost server is fine
 port = 1234
 # use the UDP protocol
-sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
 # reserve the port on the machine so that this server is not interrupted
 try:
-    sock.bind((server, port))
+    s.bind((server, port))
 # if another instance is present, error and quit
 except socket.error as e:
     str(e)
 
-# list of active sessions
-sessions = []
 
-"""
-    conn: the connection information to the client (where to send and receive input)
-    session: the game session
-"""
+players = []
+# list of active clients
+clients_addr = []
 
-def client_stream(conn, session):
-    # send initial state to the adapter when first connecting
-    conn.sendto()
-    while True:
-        try:
-            inbound_data = conn.recvfrom(2048)
-            if not inbound_data: break
-
-        # if the connection fails, assume the connection is dead
-        except:
-            break
-
-
-sock.listen(2)
 print("server init complete. waiting for connection...")
+
 
 # main loop to accept connections
 def incoming_conn_listener():
     while True:
-        # blocking event, so the loop pauses here until a new connection is received
-        conn, addr = sock.accept()
-        print(f"New connection discovered: {addr}")
-        # start a new thread to handle all player connection information from here
-        start_new_thread(client_stream, (conn, ))
+        # "entry point" for all incoming requests
+        data, addr = s.recvfrom(4096)
+        client_status = pickle.loads(data)
+        if len(clients_addr) >= MAX_CLIENTS:
+            limit_message = {"status": "max_connection"}
+            s.sendto(pickle.dumps(limit_message), addr)
+            continue
+
+        if addr not in clients_addr:
+            clients_addr.append(addr)
+            player_id = clients_addr.index(addr)
+            players.insert(player_id, Player(50, 50, 30, 30, (255, 0, 255)))
+
+            payload = {
+                "status": "connected",
+                "player_id": player_id,
+                "player_states": players
+            }
+
+            print(f"{addr} connected as player {player_id}")
+            s.sendto(pickle.dumps(payload), addr)
+            continue
+
+        if client_status.get("status") == "disconnect":
+            leaving = clients_addr.index(addr)
+            print(f"player {leaving} initiated disconnect")
+            # NOT thread-safe, but this is a single threaded server.
+            clients_addr.pop(leaving)
+            players.pop(leaving)
+
+            payload = {
+                "status": "disconnected"
+            }
+
+            s.sendto(pickle.dumps(payload), addr)
+            continue
+
+        else:
+            player_id = clients_addr.index(addr)
+            process_state(client_status.get("command"), player_id)
+
+            payload = {
+                "status": "connected",
+                "player_id": player_id,
+                "player_states": players
+            }
+
+            s.sendto(pickle.dumps(payload), addr)
 
 
-def create_session():
-    return
+def process_state(command, player_id):
+    players[player_id].move(command, GAME_SIZE)
+
+
+incoming_conn_listener()
