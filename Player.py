@@ -10,9 +10,9 @@ class Player(pygame.sprite.Sprite):
         self.color = color
 
         # how far each player moves each frame
-        # use this in the server to "guess" where a person is going given connection drops
-        self.x_vel = 1
-        self.y_vel = 1
+        # use this in the server to "guess" where a person is going given connection drops (maybe implement later?)
+        self.x_vel = 10
+        self.y_vel = 10
 
     def get_rectangle(self):
         return pygame.Rect(self.x, self.y, self.width, self.height)

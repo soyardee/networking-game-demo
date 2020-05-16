@@ -20,12 +20,18 @@ class Network:
     # init a connection to the server
     def connect(self):
         payload = {
-            "status": self.connection_status
+            "status": "connecting"
         }
         try:
             self.socket.sendto(pickle.dumps(payload), self.server_addr)
             data = pickle.loads(self.socket.recvfrom(self.MAX_DGRAM_SIZE)[0])
-            self.process_payload(data)
+
+            if data.get("status") == "establishing":
+                self.socket.sendto(pickle.dumps({"status": "validated"}), self.server_addr)
+                init_state = pickle.loads(self.socket.recvfrom(self.MAX_DGRAM_SIZE)[0])
+                self.process_payload(init_state)
+            else:
+                return
         except socket.error:
             print(socket.error)
 

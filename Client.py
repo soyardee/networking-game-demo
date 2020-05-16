@@ -3,12 +3,12 @@ from NetworkAdapter import Network
 from Player import Player
 
 pygame.init()
-n = Network("127.0.0.1", 1234)
+n = Network("73.37.174.96", 9652)
 
-
+font = pygame.font.SysFont('Courier New', 40)
 window = pygame.display.set_mode((1000, 1000))
 clock = pygame.time.Clock()
-run = True
+run = False
 
 
 def eventQueue(events):
@@ -17,14 +17,20 @@ def eventQueue(events):
         if event.type == pygame.QUIT:
             run = False
 
+def draw_loading_screen():
+    window.fill((255, 255, 255))
+    surface = font.render("Connecting", False, (255,0,0))
+    window.blit(surface, (0, 0))
+    pygame.display.update()
 
 def draw_screen(player_data):
-    window.fill((0, 0, 0))
+    window.fill((255, 255, 255))
 
     for p in player_data:
         p.render(window)
 
     pygame.display.update()
+
 
 def movement(keys):
     command = ""
@@ -39,23 +45,31 @@ def movement(keys):
 
     n.move(command)
 
-while not n.ready:
-    n.connect()
 
-while run:
-    # run the game at 60 fps
-    clock.tick(60)
-
-    players = n.get_players()
-    eventList = pygame.event.get()
-    keys = pygame.key.get_pressed()
-    movement(keys)
+def init_connection():
+    global run
+    draw_loading_screen()
+    while not n.ready:
+        n.connect()
+    run = True
 
 
-    eventQueue(eventList)
-    draw_screen(players)
+def main():
+    init_connection()
+    while run:
+        # run the game at 60 fps
+        clock.tick(60)
 
+        players = n.get_players()
+        eventList = pygame.event.get()
+        keys = pygame.key.get_pressed()
+        movement(keys)
 
-n.disconnect()
-pygame.quit()
+        eventQueue(eventList)
+        draw_screen(players)
+
+    n.disconnect()
+    pygame.quit()
+
+main()
 
