@@ -39,7 +39,7 @@ class Network:
         self.connection_status = "disconnect"
         self.ready = False
         print(f"{self.player_id} initiated disconnect")
-        self.send({"status": "disconnect"})
+        self.socket.sendto(pickle.dumps({"status": "disconnect"}), self.server_addr)
         return
 
     # send player information to the server, return a new player state.
