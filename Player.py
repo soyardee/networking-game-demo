@@ -1,6 +1,10 @@
 import pygame
 
 class Player(pygame.sprite.Sprite):
+    """
+    Using the pygame sprite as the parent object, store the state of the
+    current player.
+    """
     def __init__(self, x, y, width, height, color):
         pygame.sprite.Sprite.__init__(self)
         self.x = x
@@ -10,7 +14,6 @@ class Player(pygame.sprite.Sprite):
         self.color = color
 
         # how far each player moves each frame
-        # use this in the server to "guess" where a person is going given connection drops (maybe implement later?)
         self.x_vel = 10
         self.y_vel = 10
 

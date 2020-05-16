@@ -4,12 +4,16 @@ from Player import Player
 
 
 class Network:
+    """
+    This class handles the socket, input, and game state.
+    """
     def __init__(self, server_ip, server_port):
         self.state = []
         self.player_id = 0
         self.player = None
         self.players = []
         self.ready = False
+        self.fail = False
         self.connection_status = "connecting"
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.server = server_ip
@@ -30,15 +34,18 @@ class Network:
                 self.socket.sendto(pickle.dumps({"status": "validated"}), self.server_addr)
                 init_state = pickle.loads(self.socket.recvfrom(self.MAX_DGRAM_SIZE)[0])
                 self.process_payload(init_state)
+            if data.get("status") == "max_connection":
+                self.fail = True
             else:
                 return
         except socket.error:
             print(socket.error)
+            self.fail = True
 
     def disconnect(self):
         self.connection_status = "disconnect"
         self.ready = False
-        print(f"{self.player_id} initiated disconnect")
+        print(f"client is disconnecting")
         self.socket.sendto(pickle.dumps({"status": "disconnect"}), self.server_addr)
         return
 

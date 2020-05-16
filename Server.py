@@ -22,13 +22,23 @@ except socket.error as e:
 
 
 # locked lists, must yield to a thread before processing.
-players = [None, None, None, None]
-clients_addr = [None, None, None, None]
-clients_time = [None, None, None, None]
+players = []
+clients_addr = []
+clients_time = []
 total_players = 0
 
 # so that the player state is processed by one thread at a time
 state_lock = threading.Lock()
+
+
+# populate the player information lists with None types.
+# appending player information without an indexing system is challenging.
+# this should probably be refactored.
+def init():
+    for i in range(0, MAX_CLIENTS):
+        players.append(None)
+        clients_addr.append(None)
+        clients_time.append(None)
 
 
 # main loop to accept connections
@@ -38,17 +48,22 @@ def incoming_conn_listener():
         data, addr = s.recvfrom(4096)
         client_status = pickle.loads(data)
 
+        # verify that the client is sending the correct information
         if type(client_status) is dict:
             process_payload(client_status, addr)
 
 
+# a "switch" event where the data is processed based on the status of the client.
 def process_payload(data, addr):
+    # if the server is full, send back that message and disconnect.
     if total_players >= MAX_CLIENTS:
         limit_message = {"status": "max_connection"}
         s.sendto(pickle.dumps(limit_message), addr)
         return
 
     status = data.get("status")
+
+    # initiate a new request and validate handshake
     if addr not in clients_addr:
         if status == "connecting":
             s.sendto(pickle.dumps({"status": "establishing"}), addr)
@@ -56,26 +71,33 @@ def process_payload(data, addr):
             establish_connection(data, addr)
         return
 
+    # when the client sends a clean disconnect request, remove them from the list
     if status == "disconnect":
         state_lock.acquire()
         disconnect(addr)
         state_lock.release()
         return
 
+    # each player id is simply based on when they connected
+    # ex 1st connection = player 1
     player_id = int(clients_addr.index(addr))
     process_state(data.get("command"), player_id)
 
+    # the data sent to the client for processing
     payload = {
         "status": "connected",
         "player_id": player_id,
         "player_states": filter_players(players)
     }
+
+    # there can only be one packet sent at a time from one socket.
     s.sendto(pickle.dumps(payload), addr)
 
     # mark the last time seen in the client, to be compared by the timeout thread
     clients_time[player_id] = time.time_ns()
 
 
+# move the player based on the command sent to the server.
 def process_state(command, player_id):
     state_lock.acquire(blocking=True)
     players[player_id].move(command, GAME_SIZE)
@@ -83,6 +105,7 @@ def process_state(command, player_id):
 
 
 # if the client responds with 'validated', then they are a real client connection
+# add the player to a parallel list slot
 def establish_connection(data, addr):
     state_lock.acquire()
     player_pos = get_open_slot()
@@ -100,15 +123,18 @@ def establish_connection(data, addr):
         "player_states": filter_players(players)
     }
 
+    # send the player the information upon initial connect
     print(f"{addr} connected as player {player_id}")
     s.sendto(pickle.dumps(payload), addr)
     return
 
 
 # remove the player from the server state
+# this method is NOT thread safe, so make sure the thread is locked
+# below the call stack.
 def disconnect(addr):
     index = clients_addr.index(addr)
-    print(f"player {index} initiated disconnect")
+    print(f"player {index} disconnected")
     clients_addr[index] = None
     players[index] = None
     clients_time[index] = None
@@ -116,7 +142,7 @@ def disconnect(addr):
     total_players -= 1
 
 
-# check the player states, if they are not locked every so often.
+# check the player states every so often.
 # feel free to run this once every few seconds. This speeds up server performance.
 def check_timeout():
     while True:
@@ -136,6 +162,8 @@ def get_color(index):
     colors = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (0, 0, 0)]
     return colors[index]
 
+
+# returns a player's index based on their connection information.
 def get_open_slot():
     return clients_addr.index(None)
 
@@ -145,7 +173,11 @@ def filter_players(player_list):
     return list(filter(None, player_list))
 
 
+# the main server loop.
 def main():
+    init()
+
+    # create a new timeout thread to check for clients that haven't been seen for a few seconds.
     timeout_thread = threading.Thread(target=check_timeout, daemon=True)
     timeout_thread.start()
 
@@ -155,4 +187,5 @@ def main():
     incoming_conn_listener()
 
 
-main()
+if __name__ == "__main__":
+    main()

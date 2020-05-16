@@ -17,6 +17,8 @@ def eventQueue(events):
         if event.type == pygame.QUIT:
             run = False
 
+
+# draw the loading screen when connecting
 def draw_loading_screen():
     window.fill((255, 255, 255))
     surface = font.render("Connecting", False, (255,0,0))
@@ -32,6 +34,7 @@ def draw_screen(player_data):
     pygame.display.update()
 
 
+# process key press events
 def movement(keys):
     command = ""
     if keys[pygame.K_UP]:
@@ -46,12 +49,16 @@ def movement(keys):
     n.move(command)
 
 
+# initiate connection to the server
 def init_connection():
     global run
     draw_loading_screen()
     while not n.ready:
         n.connect()
-    run = True
+        if n.fail:
+            pygame.quit()
+            break
+    run = not n.fail
 
 
 def main():
@@ -60,6 +67,7 @@ def main():
         # run the game at 60 fps
         clock.tick(60)
 
+        # get all player states from the server
         players = n.get_players()
         eventList = pygame.event.get()
         keys = pygame.key.get_pressed()

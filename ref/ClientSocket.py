@@ -14,7 +14,7 @@ POLL_RATE = 64         # the number of packets sent per second
 
 client_conn = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 client_conn.bind(('', UDP_PORT))
-client_conn.setblocking(1)          #used for frame locking to the network rate
+client_conn.setblocking(1)          # used for frame locking to the network rate
 
 print("Running packet delay analysis...\n")
 packet_queue = deque()
