@@ -20,13 +20,13 @@ def eventQueue(events):
 
 # draw the loading screen when connecting
 def draw_loading_screen():
-    window.fill((255, 255, 255))
+    window.fill((33, 33, 33))
     surface = font.render("Connecting", False, (255,0,0))
     window.blit(surface, (0, 0))
     pygame.display.update()
 
 def draw_screen(player_data):
-    window.fill((255, 255, 255))
+    window.fill((33, 33, 33))
 
     for p in player_data:
         p.render(window)

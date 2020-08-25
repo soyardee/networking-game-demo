@@ -159,7 +159,7 @@ def check_timeout():
 
 # get a predefined color for each player based on id
 def get_color(index):
-    colors = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (0, 0, 0)]
+    colors = [(255, 255, 255), (100, 100, 150), (100, 150, 100), (150, 100, 100)]
     return colors[index]
 
 

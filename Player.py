@@ -1,5 +1,6 @@
 import pygame
 
+
 class Player(pygame.sprite.Sprite):
     """
     Using the pygame sprite as the parent object, store the state of the
